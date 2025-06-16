@@ -58,16 +58,17 @@
     const panel = document.getElementById('adminPanel');
 
     onAuthStateChangedHandler((user) => {
-      if (user) {
-        authUI.style.display = 'none';
-        panel.style.display = 'block';
-        loadQuizPool();
-        loadSuggestions();
-      } else {
-        authUI.style.display = 'block';
-        panel.style.display = 'none';
-      }
-    });
+  if (user && user.email === "hale7292@gmail.com") {
+    authUI.style.display = 'none';
+    panel.style.display = 'block';
+    loadQuizPool();
+    loadSuggestions();
+  } else {
+    authUI.innerHTML = "<p>🚫 접근 권한이 없습니다.</p>";
+    panel.style.display = 'none';
+  }
+});
+
 
     document.getElementById('loginBtn').addEventListener('click', () => {
       signIn((user) => {

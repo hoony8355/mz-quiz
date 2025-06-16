@@ -88,6 +88,6 @@ export function getCurrentUser() {
 
 /** 이메일 화이트리스트 접근 제어용 유틸 */
 export function isAuthorized(email) {
-  const allowed = ["your.email@gmail.com"];
+  const allowed = ["hale7292@gmail.com"];
   return allowed.includes(email);
 }

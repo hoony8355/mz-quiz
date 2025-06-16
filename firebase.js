@@ -24,12 +24,13 @@ const db = getDatabase(app);
 const auth = getAuth(app);
 const provider = new GoogleAuthProvider();
 
-// 📌 내부 유틸
+// 🔧 내부 유틸
 const getPathRef = (path) => ref(db, path);
-const safeGet = async (path) => {
+
+export async function safeGet(path) {
   const snapshot = await get(getPathRef(path));
   return snapshot.exists() ? snapshot.val() : null;
-};
+}
 
 // 📘 퀴즈 관련
 export async function getQuizByDate(dateStr) {
@@ -41,11 +42,15 @@ export async function getAllQuizDates() {
   return data ? Object.keys(data) : [];
 }
 
-// ✅ 정답 기록 및 통계
+export async function setQuizToDate(dateStr, quizData) {
+  return await set(getPathRef(`quizzes/${dateStr}`), quizData);
+}
+
+// ✅ 정답 처리
 export async function submitAnswer(dateStr, isCorrect) {
   const path = `answers/${dateStr}/${isCorrect ? "correct" : "wrong"}`;
-  const count = await safeGet(path) || 0;
-  await set(getPathRef(path), count + 1);
+  const current = await safeGet(path) || 0;
+  return await set(getPathRef(path), current + 1);
 }
 
 export async function getAnswerStats(dateStr) {
@@ -54,8 +59,8 @@ export async function getAnswerStats(dateStr) {
 
 // 🗣️ 방명록
 export async function submitComment(message) {
-  const now = new Date().toISOString().split("T")[0];
-  await push(getPathRef("guestbook"), { message, date: now });
+  const today = new Date().toISOString().split("T")[0];
+  return await push(getPathRef("guestbook"), { message, date: today });
 }
 
 export function onGuestbookUpdate(callback) {
@@ -67,11 +72,21 @@ export function onGuestbookUpdate(callback) {
 
 // 📝 신조어 제보
 export async function submitSuggestion(term, meaning) {
-  await push(getPathRef("suggestions"), {
+  return await push(getPathRef("suggestions"), {
     term,
     meaning,
     timestamp: Date.now()
   });
+}
+
+// 📦 퀴즈 풀 관련
+export async function getQuizPool() {
+  return await safeGet("pool");
+}
+
+export async function setNewQuizToPool(keyword, hint, meaning) {
+  const id = Date.now();
+  return await set(getPathRef(`pool/${id}`), { keyword, hint, meaning });
 }
 
 // 🔐 로그인 및 인증

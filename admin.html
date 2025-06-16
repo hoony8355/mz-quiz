@@ -7,15 +7,23 @@
   <style>
     body { font-family: sans-serif; margin: 0; padding: 2rem; background: #f8f8f8; }
     h2 { margin-top: 2rem; }
-    input, textarea, select, button { margin: 0.3rem 0; padding: 0.4rem; width: 100%; max-width: 600px; }
-    .section { margin-bottom: 3rem; background: white; padding: 1rem; border-radius: 8px; box-shadow: 0 0 5px rgba(0,0,0,0.1); }
+    input, textarea, select, button {
+      margin: 0.3rem 0; padding: 0.4rem;
+      width: 100%; max-width: 600px;
+    }
+    .section {
+      margin-bottom: 3rem;
+      background: white; padding: 1rem;
+      border-radius: 8px;
+      box-shadow: 0 0 5px rgba(0,0,0,0.1);
+    }
   </style>
 </head>
 <body>
   <h1>mz퀴즈 관리자 페이지</h1>
 
   <div id="auth">
-    <p>🔒 로그인 필요</p>
+    <p id="authMessage">🔒 로그인 필요</p>
     <button id="loginBtn">구글 로그인</button>
   </div>
 
@@ -48,6 +56,7 @@
       getCurrentUser,
       isAuthorized
     } from "./firebase.js";
+
     import {
       getDatabase,
       ref as dbRef,
@@ -58,6 +67,7 @@
 
     const authUI = document.getElementById('auth');
     const panel = document.getElementById('adminPanel');
+    const authMessage = document.getElementById('authMessage');
     const db = getDatabase();
 
     function log(tag, value) {
@@ -73,7 +83,9 @@
         loadSuggestions();
         log('접근 허용됨', user.email);
       } else {
-        authUI.innerHTML = "<p>🚫 접근 권한이 없습니다.</p>";
+        authMessage.textContent = user
+          ? `🚫 ${user.email}은 접근 권한이 없습니다.`
+          : '🔒 로그인 필요';
         panel.style.display = 'none';
         log('접근 거부됨', user?.email || '비로그인');
       }
@@ -86,7 +98,6 @@
       });
     });
 
-    // 퀴즈 등록
     document.getElementById('regQuizBtn').addEventListener('click', async () => {
       const keyword = document.getElementById('regKeyword').value.trim();
       const hint = document.getElementById('regHint').value.trim();
@@ -110,7 +121,6 @@
       }
     });
 
-    // 퀴즈 풀 불러오기
     async function loadQuizPool() {
       try {
         const snapshot = await dbGet(dbRef(db, 'quizzesPool'));
@@ -129,12 +139,14 @@
       }
     }
 
-    // 날짜 배치
     document.getElementById('assignBtn').addEventListener('click', async () => {
       const raw = document.getElementById('quizPool').value;
       const date = document.getElementById('targetDate').value;
 
-      if (!raw || !date) return alert('퀴즈와 날짜를 모두 선택해주세요');
+      if (!raw || !date) {
+        alert('퀴즈와 날짜를 모두 선택해주세요');
+        return;
+      }
 
       const quiz = JSON.parse(raw);
 
@@ -147,7 +159,6 @@
       }
     });
 
-    // 제보 불러오기
     async function loadSuggestions() {
       try {
         const ul = document.getElementById('suggestList');

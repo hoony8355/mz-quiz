@@ -1,139 +1,176 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>관리자 페이지 - mz퀴즈</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>mz퀴즈 관리자</title>
   <style>
-    body { font-family: sans-serif; margin: 0; padding: 2rem; background: #f8f8f8; }
-    h2 { margin-top: 2rem; }
-    input, textarea, select, button { margin: 0.3rem 0; padding: 0.4rem; width: 100%; max-width: 600px; }
-    .section { margin-bottom: 3rem; background: white; padding: 1rem; border-radius: 8px; box-shadow: 0 0 5px rgba(0,0,0,0.1); }
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background-color: #f4f4f4;
+      padding: 2rem;
+    }
+    h1 {
+      text-align: center;
+      color: #333;
+    }
+    section {
+      background: white;
+      padding: 1.5rem;
+      margin: 1rem auto;
+      max-width: 600px;
+      border-radius: 12px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.05);
+    }
+    label {
+      font-weight: bold;
+      display: block;
+      margin-top: 1rem;
+    }
+    input, select, button {
+      width: 100%;
+      padding: 0.5rem;
+      margin-top: 0.5rem;
+      font-size: 1rem;
+      border-radius: 4px;
+      border: 1px solid #ccc;
+    }
+    button {
+      background-color: #4caf50;
+      color: white;
+      cursor: pointer;
+      margin-top: 1rem;
+    }
+    button:hover {
+      background-color: #45a049;
+    }
   </style>
 </head>
 <body>
-  <h1>mz퀴즈 관리자 페이지</h1>
+  <h1>🛠️ mz퀴즈 관리자 페이지</h1>
 
-  <div id="auth">
-    <p>🔒 로그인 필요</p>
-    <button id="loginBtn">구글 로그인</button>
-  </div>
+  <section>
+    <h2>🔐 로그인</h2>
+    <button id="loginBtn">Google 로그인</button>
+    <div id="userInfo"></div>
+  </section>
 
-  <div id="adminPanel" style="display:none;">
-    <div class="section">
-      <h2>1️⃣ 퀴즈 등록 (퀴즈 풀)</h2>
-      <input type="text" id="regKeyword" placeholder="신조어 단어" />
-      <input type="text" id="regHint" placeholder="자음 힌트" />
-      <textarea id="regMeaning" placeholder="의미 설명"></textarea>
-      <button id="regQuizBtn">등록하기</button>
-    </div>
+  <section>
+    <h2>📝 퀴즈 등록</h2>
+    <label for="newTerm">신조어</label>
+    <input type="text" id="newTerm" placeholder="예: 나잣다자" />
+    <label for="newHint">자음 힌트</label>
+    <input type="text" id="newHint" placeholder="예: ㄴㅉㄷㅈ" />
+    <label for="newMeaning">뜻 설명</label>
+    <input type="text" id="newMeaning" placeholder="예: 나 지금 자러 간다 자" />
+    <button id="registerBtn">등록하기</button>
+  </section>
 
-    <div class="section">
-      <h2>2️⃣ 퀴즈 날짜 배치</h2>
-      <select id="quizPool"></select>
-      <input type="date" id="targetDate" />
-      <button id="assignBtn">선택한 퀴즈를 해당 날짜에 배치</button>
-    </div>
-
-    <div class="section">
-      <h2>📥 제보 목록</h2>
-      <ul id="suggestList"></ul>
-    </div>
-  </div>
+  <section>
+    <h2>📅 날짜별 퀴즈 배치</h2>
+    <label for="quizSelect">등록된 퀴즈 선택</label>
+    <select id="quizSelect"></select>
+    <label for="quizDateSelect">배치할 날짜 선택</label>
+    <select id="quizDateSelect"></select>
+    <button id="assignBtn">배치하기</button>
+  </section>
 
   <script type="module">
     import {
-      signIn,
+      getAllQuizDates,
+      getQuizByDate,
+      getDatabase,
+      ref,
+      set,
+      push,
+      get,
       onAuthStateChangedHandler,
-      getAllQuizDates
-    } from "./firebase.js";
-    import { getDatabase, ref, push, get, set } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-database.js";
+      signIn,
+      isAuthorized
+    } from './firebase.js';
 
-    const authUI = document.getElementById('auth');
-    const panel = document.getElementById('adminPanel');
+    const loginBtn = document.getElementById('loginBtn');
+    const userInfo = document.getElementById('userInfo');
 
-    const db = getDatabase();
-    let usedDates = [];
-
-    onAuthStateChangedHandler((user) => {
-      if (user && user.email === "hale7292@gmail.com") {
-        authUI.style.display = 'none';
-        panel.style.display = 'block';
-        loadQuizPool();
-        loadSuggestions();
-        loadUsedDates();
-      } else {
-        authUI.innerHTML = "<p>🚫 접근 권한이 없습니다.</p>";
-        panel.style.display = 'none';
-      }
+    loginBtn.onclick = () => signIn(user => {
+      userInfo.textContent = `로그인됨: ${user.email}`;
     });
 
-    document.getElementById('loginBtn')?.addEventListener('click', () => {
-      signIn((user) => {
-        alert(`환영합니다, ${user.displayName}`);
-      });
-    });
+    // 퀴즈 등록
+    document.getElementById('registerBtn').addEventListener('click', async () => {
+      const term = document.getElementById('newTerm').value.trim();
+      const hint = document.getElementById('newHint').value.trim();
+      const meaning = document.getElementById('newMeaning').value.trim();
 
-    document.getElementById('regQuizBtn').addEventListener('click', async () => {
-      const keyword = document.getElementById('regKeyword').value.trim();
-      const hint = document.getElementById('regHint').value.trim();
-      const meaning = document.getElementById('regMeaning').value.trim();
-      if (!keyword || !hint || !meaning) return alert('모든 항목을 입력해주세요');
+      if (!term || !hint || !meaning) return alert('모든 항목을 입력해주세요.');
 
-      const snapshot = await get(ref(db, 'quizzesPool'));
-      const pool = snapshot.val() || {};
-      for (const item of Object.values(pool)) {
-        if (item.keyword === keyword) return alert('이미 등록된 퀴즈입니다');
+      // 중복 단어 방지
+      const allDates = await getAllQuizDates();
+      for (const date of allDates) {
+        const q = await getQuizByDate(date);
+        if (q && q.keyword === term) return alert('이미 등록된 단어입니다.');
       }
 
-      await push(ref(db, 'quizzesPool'), { keyword, hint, meaning });
-      alert('퀴즈가 등록되었습니다');
-      document.getElementById('regKeyword').value = '';
-      document.getElementById('regHint').value = '';
-      document.getElementById('regMeaning').value = '';
-      loadQuizPool();
+      const id = Date.now();
+      await set(ref(getDatabase(), `pool/${id}`), { keyword: term, hint, meaning });
+      alert('퀴즈가 등록되었습니다.');
+      location.reload();
     });
 
+    // 날짜 로딩
+    async function loadAvailableDates() {
+      const usedDates = await getAllQuizDates();
+      const dateSelect = document.getElementById('quizDateSelect');
+      const today = new Date();
+      for (let i = 0; i < 60; i++) {
+        const date = new Date(today);
+        date.setDate(today.getDate() - i);
+        const iso = date.toISOString().split('T')[0];
+        if (!usedDates.includes(iso)) {
+          const option = document.createElement('option');
+          option.value = iso;
+          option.textContent = iso;
+          dateSelect.appendChild(option);
+        }
+      }
+    }
+
+    // 퀴즈 풀 로딩
     async function loadQuizPool() {
-      const snapshot = await get(ref(db, 'quizzesPool'));
-      const select = document.getElementById('quizPool');
-      select.innerHTML = '';
-      const data = snapshot.val() || {};
+      const snapshot = await get(ref(getDatabase(), 'pool'));
+      const select = document.getElementById('quizSelect');
+      const data = snapshot.val();
+      if (!data) return;
       Object.entries(data).forEach(([id, q]) => {
-        const opt = document.createElement('option');
-        opt.value = JSON.stringify(q);
-        opt.textContent = `${q.keyword} / ${q.hint}`;
-        select.appendChild(opt);
+        const option = document.createElement('option');
+        option.value = id;
+        option.textContent = `${q.keyword} (${q.hint})`;
+        select.appendChild(option);
       });
     }
 
-    async function loadUsedDates() {
-      usedDates = await getAllQuizDates();
-      console.log('[loadUsedDates] 사용된 날짜:', usedDates);
-    }
-
+    // 퀴즈 배치
     document.getElementById('assignBtn').addEventListener('click', async () => {
-      const raw = document.getElementById('quizPool').value;
-      const date = document.getElementById('targetDate').value;
-      if (!raw || !date) return alert('퀴즈와 날짜를 모두 선택해주세요');
-      if (usedDates.includes(date)) return alert('이미 퀴즈가 배치된 날짜입니다');
-      const quiz = JSON.parse(raw);
-      await set(ref(db, `quizzes/${date}`), quiz);
-      alert(`✅ ${date}에 퀴즈가 배치되었습니다.`);
-      loadUsedDates();
+      const quizId = document.getElementById('quizSelect').value;
+      const date = document.getElementById('quizDateSelect').value;
+      const snapshot = await get(ref(getDatabase(), `pool/${quizId}`));
+      if (!snapshot.exists()) return alert('퀴즈 정보를 찾을 수 없습니다.');
+      const q = snapshot.val();
+      await set(ref(getDatabase(), `quizzes/${date}`), q);
+      alert(`📅 ${date}에 퀴즈가 배치되었습니다.`);
+      location.reload();
     });
 
-    async function loadSuggestions() {
-      const ul = document.getElementById('suggestList');
-      const snapshot = await get(ref(db, 'suggestions'));
-      const data = snapshot.val() || {};
-      ul.innerHTML = '';
-      Object.values(data).reverse().forEach(entry => {
-        const li = document.createElement('li');
-        li.textContent = `${entry.term} - ${entry.meaning}`;
-        ul.appendChild(li);
-      });
-    }
+    onAuthStateChangedHandler(user => {
+      if (!user || !isAuthorized(user.email)) {
+        alert('관리자만 접근 가능합니다.');
+        window.location.href = '/';
+      } else {
+        userInfo.textContent = `로그인됨: ${user.email}`;
+        loadAvailableDates();
+        loadQuizPool();
+      }
+    });
   </script>
 </body>
 </html>

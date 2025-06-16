@@ -22,11 +22,15 @@
       text-align: center;
       margin: 1rem 0;
     }
-    nav a {
+    nav a, nav button {
       margin: 0 1rem;
       text-decoration: none;
       color: #333;
       font-weight: bold;
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-size: 1rem;
     }
     .quiz-box {
       background: white;
@@ -56,6 +60,9 @@
       color: #555;
       margin-bottom: 1.5rem;
       text-align: center;
+      background: #f0f0f0;
+      padding: 0.5rem;
+      border-radius: 8px;
     }
     input[type="text"] {
       width: 100%;
@@ -68,6 +75,13 @@
       font-size: 1rem;
       margin-right: 0.5rem;
       cursor: pointer;
+      border: none;
+      background-color: #4caf50;
+      color: white;
+      border-radius: 4px;
+    }
+    button#showAnswerBtn {
+      background-color: #f44336;
     }
     .section {
       background: #fff;
@@ -105,9 +119,9 @@
 
   <div class="quiz-box">
     <div class="hint-label">🧩 자음 힌트</div>
-    <div class="hint-chosung" id="quizHint">ㅂㅈㅇ</div>
+    <div class="hint-chosung" id="quizHint">불러오는 중...</div>
     <div class="hint-label">💡 의미 힌트</div>
-    <div class="hint-meaning" id="quizMeaning">놀라거나 벙찐 상황에서 쓰는 표현</div>
+    <div class="hint-meaning" id="quizMeaning">불러오는 중...</div>
 
     <input type="text" id="answerInput" placeholder="정답을 입력해주세요" />
     <button id="submitAnswerBtn">제출</button>

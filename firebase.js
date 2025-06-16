@@ -1,3 +1,4 @@
+// firebase.js
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-app.js";
 import {
   getDatabase, ref, get, set, push, onValue
@@ -23,7 +24,7 @@ const db = getDatabase(app);
 const auth = getAuth(app);
 const provider = new GoogleAuthProvider();
 
-// 📌 공통 유틸
+// 📌 내부 유틸
 const getPathRef = (path) => ref(db, path);
 const safeGet = async (path) => {
   const snapshot = await get(getPathRef(path));
@@ -40,7 +41,7 @@ export async function getAllQuizDates() {
   return data ? Object.keys(data) : [];
 }
 
-// ✅ 정답 처리
+// ✅ 정답 기록 및 통계
 export async function submitAnswer(dateStr, isCorrect) {
   const path = `answers/${dateStr}/${isCorrect ? "correct" : "wrong"}`;
   const count = await safeGet(path) || 0;
@@ -51,7 +52,7 @@ export async function getAnswerStats(dateStr) {
   return await safeGet(`answers/${dateStr}`) || { correct: 0, wrong: 0 };
 }
 
-// 🗣️ 댓글
+// 🗣️ 방명록
 export async function submitComment(message) {
   const now = new Date().toISOString().split("T")[0];
   await push(getPathRef("guestbook"), { message, date: now });
@@ -73,7 +74,7 @@ export async function submitSuggestion(term, meaning) {
   });
 }
 
-// 🔐 인증 관련
+// 🔐 로그인 및 인증
 export function signIn(callback) {
   signInWithPopup(auth, provider)
     .then((result) => callback(result.user))

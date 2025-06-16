@@ -3,68 +3,138 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>mz퀴즈 - 오늘의 신조어 퀴즈</title>
+  <title>mz퀴즈 - 오늘의 신조어 맞히기</title>
   <style>
-    body { font-family: sans-serif; margin: 0; padding: 0; background: #f4f4f4; }
-    header { background: #333; color: white; padding: 1rem; text-align: center; }
-    nav { background: #eee; display: flex; justify-content: center; gap: 1rem; padding: 0.5rem; }
-    nav a { text-decoration: none; color: #333; font-weight: bold; }
-    section { max-width: 600px; margin: 2rem auto; background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 0 8px rgba(0,0,0,0.1); }
-    .result { margin-top: 1rem; font-weight: bold; }
-    .comment, .suggestion { margin-top: 2rem; }
-    .popup { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 1rem; box-shadow: 0 0 10px rgba(0,0,0,0.2); border-radius: 8px; z-index: 1000; }
-    .overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 999; }
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      margin: 0;
+      padding: 1rem;
+      background-color: #f4f4f4;
+    }
+    header {
+      text-align: center;
+      padding: 1rem;
+      background-color: #ffeb3b;
+      font-size: 1.5rem;
+      font-weight: bold;
+    }
+    nav {
+      text-align: center;
+      margin: 1rem 0;
+    }
+    nav a {
+      margin: 0 1rem;
+      text-decoration: none;
+      color: #333;
+      font-weight: bold;
+    }
+    .quiz-box {
+      background: white;
+      padding: 2rem;
+      max-width: 600px;
+      margin: 2rem auto;
+      border-radius: 12px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    .hint-label {
+      font-weight: bold;
+      margin-bottom: 0.5rem;
+      font-size: 1.1rem;
+    }
+    .hint-chosung {
+      font-size: 2rem;
+      letter-spacing: 1rem;
+      font-weight: bold;
+      margin-bottom: 1rem;
+      text-align: center;
+      background: #fff8dc;
+      padding: 0.5rem;
+      border-radius: 8px;
+    }
+    .hint-meaning {
+      font-size: 1rem;
+      color: #555;
+      margin-bottom: 1.5rem;
+      text-align: center;
+    }
+    input[type="text"] {
+      width: 100%;
+      padding: 0.5rem;
+      font-size: 1rem;
+      margin-bottom: 1rem;
+    }
+    button {
+      padding: 0.5rem 1rem;
+      font-size: 1rem;
+      margin-right: 0.5rem;
+      cursor: pointer;
+    }
+    .section {
+      background: #fff;
+      padding: 1rem;
+      margin: 1rem auto;
+      max-width: 600px;
+      border-radius: 8px;
+      box-shadow: 0 0 5px rgba(0,0,0,0.05);
+    }
+    .comment {
+      padding: 0.5rem;
+      border-bottom: 1px solid #eee;
+    }
+    .suggest-popup {
+      display: none;
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: white;
+      padding: 1rem;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      z-index: 10;
+    }
   </style>
 </head>
 <body>
-  <header>
-    <h1>mz퀴즈</h1>
-  </header>
-
+  <header>📘 mz퀴즈 - 오늘의 신조어 맞히기</header>
   <nav>
-    <a href="#today">오늘의 퀴즈</a>
-    <a href="#history">날짜별 퀴즈</a>
-    <button id="openSuggest">제보하기</button>
+    <a href="#" onclick="loadTodayQuiz()">오늘의 퀴즈</a>
+    <a href="#" onclick="showDateSelector()">날짜별 퀴즈</a>
+    <button onclick="toggleSuggestPopup()">📝 제보하기</button>
   </nav>
 
-  <section id="today">
-    <h2>오늘의 퀴즈</h2>
-    <p id="hint">자음 힌트: ...</p>
-    <input type="text" id="answerInput" placeholder="정답을 입력하세요" />
-    <button id="submitAnswer">정답 확인</button>
-    <button id="revealAnswer">정답 보기</button>
-    <div class="result" id="resultMessage"></div>
-  </section>
+  <div class="quiz-box">
+    <div class="hint-label">🧩 자음 힌트</div>
+    <div class="hint-chosung" id="quizHint">ㅂㅈㅇ</div>
+    <div class="hint-label">💡 의미 힌트</div>
+    <div class="hint-meaning" id="quizMeaning">놀라거나 벙찐 상황에서 쓰는 표현</div>
 
-  <section id="stats">
-    <h2>정답률 통계</h2>
-    <p id="statsData">로딩 중...</p>
-  </section>
-
-  <section class="comment">
-    <h2>댓글 (방명록)</h2>
-    <textarea id="commentInput" rows="2" style="width:100%" placeholder="한 줄 응원 또는 의견을 남겨주세요"></textarea>
-    <button id="submitComment">댓글 남기기</button>
-    <ul id="commentList"></ul>
-  </section>
-
-  <!-- 날짜별 퀴즈 -->
-  <section id="history">
-    <h2>날짜별 퀴즈 다시 풀기</h2>
-    <ul id="quizDates"></ul>
-  </section>
-
-  <!-- 제보 팝업 -->
-  <div class="overlay" id="overlay"></div>
-  <div class="popup" id="suggestPopup">
-    <h3>신조어 제보하기</h3>
-    <input type="text" id="suggestTerm" placeholder="신조어 단어" /><br />
-    <textarea id="suggestMeaning" placeholder="의미 설명" rows="3" style="width:100%; margin-top: 0.5rem;"></textarea><br />
-    <button id="submitSuggest">제보 제출</button>
-    <button id="closeSuggest">닫기</button>
+    <input type="text" id="answerInput" placeholder="정답을 입력해주세요" />
+    <button id="submitAnswerBtn">제출</button>
+    <button id="showAnswerBtn">정답확인하기</button>
+    <div id="answerResult"></div>
   </div>
 
-  <script type="module" src="firebase.js"></script>
+  <div class="section">
+    <h3>📊 정답률 통계</h3>
+    <div id="stats">불러오는 중...</div>
+  </div>
+
+  <div class="section">
+    <h3>🗣️ 방명록</h3>
+    <input type="text" id="commentInput" placeholder="자유롭게 의견을 남겨주세요" />
+    <button onclick="submitComment()">댓글 남기기</button>
+    <div id="guestbookList"></div>
+  </div>
+
+  <div class="suggest-popup" id="suggestPopup">
+    <h3>📝 신조어 제보하기</h3>
+    <input type="text" id="suggestTerm" placeholder="단어" />
+    <input type="text" id="suggestMeaning" placeholder="의미 설명" />
+    <button onclick="submitSuggestion()">제보 제출</button>
+    <button onclick="toggleSuggestPopup()">닫기</button>
+  </div>
+
   <script type="module" src="main.js"></script>
 </body>
 </html>

@@ -7,23 +7,15 @@
   <style>
     body { font-family: sans-serif; margin: 0; padding: 2rem; background: #f8f8f8; }
     h2 { margin-top: 2rem; }
-    input, textarea, select, button {
-      margin: 0.3rem 0; padding: 0.4rem;
-      width: 100%; max-width: 600px;
-    }
-    .section {
-      margin-bottom: 3rem;
-      background: white; padding: 1rem;
-      border-radius: 8px;
-      box-shadow: 0 0 5px rgba(0,0,0,0.1);
-    }
+    input, textarea, select, button { margin: 0.3rem 0; padding: 0.4rem; width: 100%; max-width: 600px; }
+    .section { margin-bottom: 3rem; background: white; padding: 1rem; border-radius: 8px; box-shadow: 0 0 5px rgba(0,0,0,0.1); }
   </style>
 </head>
 <body>
   <h1>mz퀴즈 관리자 페이지</h1>
 
   <div id="auth">
-    <p id="authMessage">🔒 로그인 필요</p>
+    <p>🔒 로그인 필요</p>
     <button id="loginBtn">구글 로그인</button>
   </div>
 
@@ -52,53 +44,38 @@
   <script type="module">
     import {
       signIn,
-      onAuthStateChangedHandler,
-      getCurrentUser,
-      isAuthorized
+      onAuthStateChangedHandler
     } from "./firebase.js";
+    import { getDatabase, ref, push, get, set } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-database.js";
 
-    import {
-      getDatabase,
-      ref as dbRef,
-      push as dbPush,
-      get as dbGet,
-      set as dbSet
-    } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-database.js";
-
-    const db = getDatabase();
     const authUI = document.getElementById('auth');
     const panel = document.getElementById('adminPanel');
-    const authMessage = document.getElementById('authMessage');
 
-    const log = (tag, value) => {
-      console.log(`[%c${tag}%c]`, 'color: orange; font-weight: bold;', 'color: black;', value);
-    };
+    function log(title, data) {
+      console.log(`🛠️ ${title}`, data);
+    }
 
     onAuthStateChangedHandler((user) => {
-      log('로그인 상태 변경', user);
-      if (user && isAuthorized(user.email)) {
+      if (user && user.email === "hale7292@gmail.com") {
         authUI.style.display = 'none';
         panel.style.display = 'block';
         loadQuizPool();
         loadSuggestions();
-        log('✅ 관리자 로그인 성공', user.email);
       } else {
-        authMessage.textContent = user
-          ? `🚫 ${user.email}은 접근 권한이 없습니다.`
-          : '🔒 로그인 필요';
+        authUI.innerHTML = "<p>🚫 접근 권한이 없습니다.</p>";
         panel.style.display = 'none';
-        log('⛔️ 관리자 접근 거부', user?.email || '비로그인');
       }
     });
 
     document.getElementById('loginBtn').addEventListener('click', () => {
-      log('🔑 로그인 버튼 클릭됨', '');
       signIn((user) => {
         alert(`환영합니다, ${user.displayName}`);
-        log('로그인 성공', user);
       });
     });
 
+    const db = getDatabase();
+
+    // 퀴즈 등록 시 중복 검사 포함
     document.getElementById('regQuizBtn').addEventListener('click', async () => {
       log('📩 [등록 버튼 클릭됨]', '');
 
@@ -114,7 +91,16 @@
       }
 
       try {
-        await dbPush(dbRef(db, 'quizzesPool'), { keyword, hint, meaning });
+        const poolSnap = await get(ref(db, 'quizzesPool'));
+        const poolData = poolSnap.val() || {};
+        const keywords = Object.values(poolData).map(q => q.keyword);
+
+        if (keywords.includes(keyword)) {
+          alert(`이미 등록된 단어입니다: "${keyword}"`);
+          return;
+        }
+
+        await push(ref(db, 'quizzesPool'), { keyword, hint, meaning });
         alert('퀴즈가 등록되었습니다!');
         log('✅ 퀴즈 등록 성공', { keyword, hint });
         document.getElementById('regKeyword').value = '';
@@ -127,61 +113,58 @@
       }
     });
 
+    // 퀴즈 풀 불러오기 (배치된 것 제외)
     async function loadQuizPool() {
       try {
-        const snapshot = await dbGet(dbRef(db, 'quizzesPool'));
+        const [poolSnap, assignedSnap] = await Promise.all([
+          get(ref(db, 'quizzesPool')),
+          get(ref(db, 'quizzes'))
+        ]);
+
         const select = document.getElementById('quizPool');
         select.innerHTML = '';
-        const data = snapshot.val() || {};
-        Object.entries(data).forEach(([id, q]) => {
+
+        const poolData = poolSnap.val() || {};
+        const assignedData = assignedSnap.val() || {};
+
+        const assignedKeywords = Object.values(assignedData).map(q => q.keyword);
+
+        Object.entries(poolData).forEach(([id, q]) => {
+          if (assignedKeywords.includes(q.keyword)) return;
           const opt = document.createElement('option');
           opt.value = JSON.stringify(q);
           opt.textContent = `${q.keyword} / ${q.hint}`;
           select.appendChild(opt);
         });
-        log('📚 퀴즈 풀 불러오기 완료', data);
+
+        log('📚 선택 가능 퀴즈 풀 로딩 (배치된 것 제외)', poolData);
       } catch (error) {
         console.error('❌ [오류] 퀴즈 풀 불러오기 실패:', error);
       }
     }
 
+    // 날짜 배치
     document.getElementById('assignBtn').addEventListener('click', async () => {
       const raw = document.getElementById('quizPool').value;
       const date = document.getElementById('targetDate').value;
-
-      if (!raw || !date) {
-        alert('퀴즈와 날짜를 모두 선택해주세요.');
-        return;
-      }
-
+      if (!raw || !date) return alert('퀴즈와 날짜를 모두 선택해주세요');
       const quiz = JSON.parse(raw);
-      log('📅 날짜 배치 시도', { date, quiz });
-
-      try {
-        await dbSet(dbRef(db, `quizzes/${date}`), quiz);
-        alert(`✅ ${date}에 퀴즈가 배치되었습니다.`);
-        log('✅ 날짜 배치 성공', date);
-      } catch (error) {
-        console.error('❌ [오류] 날짜 배치 실패:', error);
-        alert('날짜 배치 중 오류가 발생했습니다.');
-      }
+      await set(ref(db, `quizzes/${date}`), quiz);
+      alert(`✅ ${date}에 퀴즈가 배치되었습니다.`);
+      loadQuizPool();
     });
 
+    // 제보 불러오기
     async function loadSuggestions() {
-      try {
-        const ul = document.getElementById('suggestList');
-        const snapshot = await dbGet(dbRef(db, 'suggestions'));
-        const data = snapshot.val() || {};
-        ul.innerHTML = '';
-        Object.values(data).reverse().forEach(entry => {
-          const li = document.createElement('li');
-          li.textContent = `${entry.term} - ${entry.meaning}`;
-          ul.appendChild(li);
-        });
-        log('📥 제보 불러오기 완료', data);
-      } catch (error) {
-        console.error('❌ [오류] 제보 불러오기 실패:', error);
-      }
+      const ul = document.getElementById('suggestList');
+      const snapshot = await get(ref(db, 'suggestions'));
+      const data = snapshot.val() || {};
+      ul.innerHTML = '';
+      Object.values(data).reverse().forEach(entry => {
+        const li = document.createElement('li');
+        li.textContent = `${entry.term} - ${entry.meaning}`;
+        ul.appendChild(li);
+      });
     }
   </script>
 </body>

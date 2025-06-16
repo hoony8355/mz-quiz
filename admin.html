@@ -44,16 +44,16 @@
   <script type="module">
     import {
       signIn,
-      onAuthStateChangedHandler
+      onAuthStateChangedHandler,
+      getAllQuizDates
     } from "./firebase.js";
     import { getDatabase, ref, push, get, set } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-database.js";
 
     const authUI = document.getElementById('auth');
     const panel = document.getElementById('adminPanel');
 
-    function log(title, data) {
-      console.log(`🛠️ ${title}`, data);
-    }
+    const db = getDatabase();
+    let usedDates = [];
 
     onAuthStateChangedHandler((user) => {
       if (user && user.email === "hale7292@gmail.com") {
@@ -61,100 +61,68 @@
         panel.style.display = 'block';
         loadQuizPool();
         loadSuggestions();
+        loadUsedDates();
       } else {
         authUI.innerHTML = "<p>🚫 접근 권한이 없습니다.</p>";
         panel.style.display = 'none';
       }
     });
 
-    document.getElementById('loginBtn').addEventListener('click', () => {
+    document.getElementById('loginBtn')?.addEventListener('click', () => {
       signIn((user) => {
         alert(`환영합니다, ${user.displayName}`);
       });
     });
 
-    const db = getDatabase();
-
-    // 퀴즈 등록 시 중복 검사 포함
     document.getElementById('regQuizBtn').addEventListener('click', async () => {
-      log('📩 [등록 버튼 클릭됨]', '');
-
       const keyword = document.getElementById('regKeyword').value.trim();
       const hint = document.getElementById('regHint').value.trim();
       const meaning = document.getElementById('regMeaning').value.trim();
+      if (!keyword || !hint || !meaning) return alert('모든 항목을 입력해주세요');
 
-      log('입력값 검사', { keyword, hint, meaning });
-
-      if (!keyword || !hint || !meaning) {
-        alert('모든 항목을 입력해주세요');
-        return;
+      const snapshot = await get(ref(db, 'quizzesPool'));
+      const pool = snapshot.val() || {};
+      for (const item of Object.values(pool)) {
+        if (item.keyword === keyword) return alert('이미 등록된 퀴즈입니다');
       }
 
-      try {
-        const poolSnap = await get(ref(db, 'quizzesPool'));
-        const poolData = poolSnap.val() || {};
-        const keywords = Object.values(poolData).map(q => q.keyword);
-
-        if (keywords.includes(keyword)) {
-          alert(`이미 등록된 단어입니다: "${keyword}"`);
-          return;
-        }
-
-        await push(ref(db, 'quizzesPool'), { keyword, hint, meaning });
-        alert('퀴즈가 등록되었습니다!');
-        log('✅ 퀴즈 등록 성공', { keyword, hint });
-        document.getElementById('regKeyword').value = '';
-        document.getElementById('regHint').value = '';
-        document.getElementById('regMeaning').value = '';
-        loadQuizPool();
-      } catch (error) {
-        console.error('❌ [오류] 퀴즈 등록 실패:', error);
-        alert('퀴즈 등록 중 오류가 발생했습니다.');
-      }
+      await push(ref(db, 'quizzesPool'), { keyword, hint, meaning });
+      alert('퀴즈가 등록되었습니다');
+      document.getElementById('regKeyword').value = '';
+      document.getElementById('regHint').value = '';
+      document.getElementById('regMeaning').value = '';
+      loadQuizPool();
     });
 
-    // 퀴즈 풀 불러오기 (배치된 것 제외)
     async function loadQuizPool() {
-      try {
-        const [poolSnap, assignedSnap] = await Promise.all([
-          get(ref(db, 'quizzesPool')),
-          get(ref(db, 'quizzes'))
-        ]);
-
-        const select = document.getElementById('quizPool');
-        select.innerHTML = '';
-
-        const poolData = poolSnap.val() || {};
-        const assignedData = assignedSnap.val() || {};
-
-        const assignedKeywords = Object.values(assignedData).map(q => q.keyword);
-
-        Object.entries(poolData).forEach(([id, q]) => {
-          if (assignedKeywords.includes(q.keyword)) return;
-          const opt = document.createElement('option');
-          opt.value = JSON.stringify(q);
-          opt.textContent = `${q.keyword} / ${q.hint}`;
-          select.appendChild(opt);
-        });
-
-        log('📚 선택 가능 퀴즈 풀 로딩 (배치된 것 제외)', poolData);
-      } catch (error) {
-        console.error('❌ [오류] 퀴즈 풀 불러오기 실패:', error);
-      }
+      const snapshot = await get(ref(db, 'quizzesPool'));
+      const select = document.getElementById('quizPool');
+      select.innerHTML = '';
+      const data = snapshot.val() || {};
+      Object.entries(data).forEach(([id, q]) => {
+        const opt = document.createElement('option');
+        opt.value = JSON.stringify(q);
+        opt.textContent = `${q.keyword} / ${q.hint}`;
+        select.appendChild(opt);
+      });
     }
 
-    // 날짜 배치
+    async function loadUsedDates() {
+      usedDates = await getAllQuizDates();
+      console.log('[loadUsedDates] 사용된 날짜:', usedDates);
+    }
+
     document.getElementById('assignBtn').addEventListener('click', async () => {
       const raw = document.getElementById('quizPool').value;
       const date = document.getElementById('targetDate').value;
       if (!raw || !date) return alert('퀴즈와 날짜를 모두 선택해주세요');
+      if (usedDates.includes(date)) return alert('이미 퀴즈가 배치된 날짜입니다');
       const quiz = JSON.parse(raw);
       await set(ref(db, `quizzes/${date}`), quiz);
       alert(`✅ ${date}에 퀴즈가 배치되었습니다.`);
-      loadQuizPool();
+      loadUsedDates();
     });
 
-    // 제보 불러오기
     async function loadSuggestions() {
       const ul = document.getElementById('suggestList');
       const snapshot = await get(ref(db, 'suggestions'));

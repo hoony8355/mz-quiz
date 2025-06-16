@@ -79,11 +79,10 @@
     import {
       getAllQuizDates,
       getQuizByDate,
-      getDatabase,
-      ref,
-      set,
-      push,
-      get,
+      safeGet,
+      setQuizToDate,
+      getQuizPool,
+      setNewQuizToPool,
       onAuthStateChangedHandler,
       signIn,
       isAuthorized
@@ -96,28 +95,23 @@
       userInfo.textContent = `로그인됨: ${user.email}`;
     });
 
-    // 퀴즈 등록
     document.getElementById('registerBtn').addEventListener('click', async () => {
       const term = document.getElementById('newTerm').value.trim();
       const hint = document.getElementById('newHint').value.trim();
       const meaning = document.getElementById('newMeaning').value.trim();
-
       if (!term || !hint || !meaning) return alert('모든 항목을 입력해주세요.');
 
-      // 중복 단어 방지
       const allDates = await getAllQuizDates();
       for (const date of allDates) {
         const q = await getQuizByDate(date);
-        if (q && q.keyword === term) return alert('이미 등록된 단어입니다.');
+        if (q?.keyword === term) return alert('이미 등록된 단어입니다.');
       }
 
-      const id = Date.now();
-      await set(ref(getDatabase(), `pool/${id}`), { keyword: term, hint, meaning });
+      await setNewQuizToPool(term, hint, meaning);
       alert('퀴즈가 등록되었습니다.');
       location.reload();
     });
 
-    // 날짜 로딩
     async function loadAvailableDates() {
       const usedDates = await getAllQuizDates();
       const dateSelect = document.getElementById('quizDateSelect');
@@ -135,11 +129,9 @@
       }
     }
 
-    // 퀴즈 풀 로딩
     async function loadQuizPool() {
-      const snapshot = await get(ref(getDatabase(), 'pool'));
+      const data = await getQuizPool();
       const select = document.getElementById('quizSelect');
-      const data = snapshot.val();
       if (!data) return;
       Object.entries(data).forEach(([id, q]) => {
         const option = document.createElement('option');
@@ -149,14 +141,12 @@
       });
     }
 
-    // 퀴즈 배치
     document.getElementById('assignBtn').addEventListener('click', async () => {
       const quizId = document.getElementById('quizSelect').value;
       const date = document.getElementById('quizDateSelect').value;
-      const snapshot = await get(ref(getDatabase(), `pool/${quizId}`));
-      if (!snapshot.exists()) return alert('퀴즈 정보를 찾을 수 없습니다.');
-      const q = snapshot.val();
-      await set(ref(getDatabase(), `quizzes/${date}`), q);
+      const q = await safeGet(`pool/${quizId}`);
+      if (!q) return alert('퀴즈 정보를 찾을 수 없습니다.');
+      await setQuizToDate(date, q);
       alert(`📅 ${date}에 퀴즈가 배치되었습니다.`);
       location.reload();
     });

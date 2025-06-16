@@ -65,14 +65,14 @@
       set as dbSet
     } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-database.js";
 
+    const db = getDatabase();
     const authUI = document.getElementById('auth');
     const panel = document.getElementById('adminPanel');
     const authMessage = document.getElementById('authMessage');
-    const db = getDatabase();
 
-    function log(tag, value) {
-      console.log(`[%c${tag}%c]`, 'color: blue; font-weight: bold;', 'color: black;', value);
-    }
+    const log = (tag, value) => {
+      console.log(`[%c${tag}%c]`, 'color: orange; font-weight: bold;', 'color: black;', value);
+    };
 
     onAuthStateChangedHandler((user) => {
       log('로그인 상태 변경', user);
@@ -81,17 +81,18 @@
         panel.style.display = 'block';
         loadQuizPool();
         loadSuggestions();
-        log('접근 허용됨', user.email);
+        log('✅ 관리자 로그인 성공', user.email);
       } else {
         authMessage.textContent = user
           ? `🚫 ${user.email}은 접근 권한이 없습니다.`
           : '🔒 로그인 필요';
         panel.style.display = 'none';
-        log('접근 거부됨', user?.email || '비로그인');
+        log('⛔️ 관리자 접근 거부', user?.email || '비로그인');
       }
     });
 
     document.getElementById('loginBtn').addEventListener('click', () => {
+      log('🔑 로그인 버튼 클릭됨', '');
       signIn((user) => {
         alert(`환영합니다, ${user.displayName}`);
         log('로그인 성공', user);
@@ -99,9 +100,13 @@
     });
 
     document.getElementById('regQuizBtn').addEventListener('click', async () => {
+      log('📩 [등록 버튼 클릭됨]', '');
+
       const keyword = document.getElementById('regKeyword').value.trim();
       const hint = document.getElementById('regHint').value.trim();
       const meaning = document.getElementById('regMeaning').value.trim();
+
+      log('입력값 검사', { keyword, hint, meaning });
 
       if (!keyword || !hint || !meaning) {
         alert('모든 항목을 입력해주세요');
@@ -110,14 +115,15 @@
 
       try {
         await dbPush(dbRef(db, 'quizzesPool'), { keyword, hint, meaning });
-        alert('퀴즈가 등록되었습니다');
-        log('퀴즈 등록됨', { keyword, hint });
+        alert('퀴즈가 등록되었습니다!');
+        log('✅ 퀴즈 등록 성공', { keyword, hint });
         document.getElementById('regKeyword').value = '';
         document.getElementById('regHint').value = '';
         document.getElementById('regMeaning').value = '';
         loadQuizPool();
-      } catch (err) {
-        console.error('[오류] 퀴즈 등록 실패', err);
+      } catch (error) {
+        console.error('❌ [오류] 퀴즈 등록 실패:', error);
+        alert('퀴즈 등록 중 오류가 발생했습니다.');
       }
     });
 
@@ -133,9 +139,9 @@
           opt.textContent = `${q.keyword} / ${q.hint}`;
           select.appendChild(opt);
         });
-        log('퀴즈 풀 로딩 완료', data);
-      } catch (err) {
-        console.error('[오류] 퀴즈 풀 불러오기 실패', err);
+        log('📚 퀴즈 풀 불러오기 완료', data);
+      } catch (error) {
+        console.error('❌ [오류] 퀴즈 풀 불러오기 실패:', error);
       }
     }
 
@@ -144,18 +150,20 @@
       const date = document.getElementById('targetDate').value;
 
       if (!raw || !date) {
-        alert('퀴즈와 날짜를 모두 선택해주세요');
+        alert('퀴즈와 날짜를 모두 선택해주세요.');
         return;
       }
 
       const quiz = JSON.parse(raw);
+      log('📅 날짜 배치 시도', { date, quiz });
 
       try {
         await dbSet(dbRef(db, `quizzes/${date}`), quiz);
         alert(`✅ ${date}에 퀴즈가 배치되었습니다.`);
-        log('날짜 배치 완료', { date, quiz });
-      } catch (err) {
-        console.error('[오류] 퀴즈 날짜 배치 실패', err);
+        log('✅ 날짜 배치 성공', date);
+      } catch (error) {
+        console.error('❌ [오류] 날짜 배치 실패:', error);
+        alert('날짜 배치 중 오류가 발생했습니다.');
       }
     });
 
@@ -170,9 +178,9 @@
           li.textContent = `${entry.term} - ${entry.meaning}`;
           ul.appendChild(li);
         });
-        log('제보 목록 로딩됨', data);
-      } catch (err) {
-        console.error('[오류] 제보 목록 로딩 실패', err);
+        log('📥 제보 불러오기 완료', data);
+      } catch (error) {
+        console.error('❌ [오류] 제보 불러오기 실패:', error);
       }
     }
   </script>

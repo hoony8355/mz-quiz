@@ -138,7 +138,7 @@
     <h3>🗣️ 방명록</h3>
     <input type="text" id="commentInput" placeholder="자유롭게 의견을 남겨주세요" />
     <button onclick="submitComment()">댓글 남기기</button>
-    <div id="guestbookList"></div>
+    <ul id="guestbookList"></ul>
   </div>
 
   <div class="suggest-popup" id="suggestPopup">
@@ -147,6 +147,12 @@
     <input type="text" id="suggestMeaning" placeholder="의미 설명" />
     <button onclick="submitSuggestion()">제보 제출</button>
     <button onclick="toggleSuggestPopup()">닫기</button>
+  </div>
+
+  <div class="section" id="dateSelectorSection" style="display:none;">
+    <h3>📅 날짜 선택</h3>
+    <select id="quizDateSelector"></select>
+    <button id="loadSelectedDateBtn">불러오기</button>
   </div>
 
   <script type="module" src="main.js"></script>

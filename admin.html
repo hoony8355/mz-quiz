@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>mz퀴즈 관리자</title>
   <style>
     body {
@@ -95,6 +95,7 @@
       userInfo.textContent = `로그인됨: ${user.email}`;
     });
 
+    // 🔐 퀴즈 등록
     document.getElementById('registerBtn').addEventListener('click', async () => {
       const term = document.getElementById('newTerm').value.trim();
       const hint = document.getElementById('newHint').value.trim();
@@ -112,13 +113,14 @@
       location.reload();
     });
 
+    // 📅 날짜 로딩 (과거+미래 포함, 이미 등록된 날짜 제외)
     async function loadAvailableDates() {
       const usedDates = await getAllQuizDates();
       const dateSelect = document.getElementById('quizDateSelect');
       const today = new Date();
-      for (let i = 0; i < 60; i++) {
+      for (let i = -30; i <= 30; i++) {
         const date = new Date(today);
-        date.setDate(today.getDate() - i);
+        date.setDate(today.getDate() + i);
         const iso = date.toISOString().split('T')[0];
         if (!usedDates.includes(iso)) {
           const option = document.createElement('option');
@@ -129,6 +131,7 @@
       }
     }
 
+    // 🧠 퀴즈 풀 로딩
     async function loadQuizPool() {
       const data = await getQuizPool();
       const select = document.getElementById('quizSelect');
@@ -141,6 +144,7 @@
       });
     }
 
+    // ⏱️ 퀴즈 날짜 배치
     document.getElementById('assignBtn').addEventListener('click', async () => {
       const quizId = document.getElementById('quizSelect').value;
       const date = document.getElementById('quizDateSelect').value;

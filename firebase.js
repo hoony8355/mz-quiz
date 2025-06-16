@@ -15,7 +15,7 @@ const firebaseConfig = {
   messagingSenderId: "5450421788",
   appId: "1:5450421788:web:8cdfcbb0c72622cd6031d9",
   measurementId: "G-ZLG5MZBR4K",
-  databaseURL: "https://mz-quiz-6e0ab-default-rtdb.firebaseio.com"
+  databaseURL: "https://mz-quiz-6e0ab-default-rtdb.asia-southeast1.firebasedatabase.app"
 };
 
 const app = initializeApp(firebaseConfig);
